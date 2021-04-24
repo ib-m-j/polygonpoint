@@ -33,6 +33,29 @@ def drawLines(canvas, outer, inner, color = 'black'):
         if count == 14:
             break
 
+
+class CanvasMap:
+    def __init__(self, origin, scale):
+        self.origin = origin
+        self.scale = scale
+
+    def setcanvas(self, canvas):
+        self.canvas = canvas
+        
+    def map(self, point):
+        return list(self.scale*point +self.origin)
+
+
+        
+drawObjects = []
+currentMap = CanvasMap(numpy.array((400,400)), 4)
+
+def redraw():
+    for o in drawObjects:
+        o.draw(currentMap)
+
+
+        
 def drawBoard(outer, inner):#cellKeys):
 
     sg.theme('DarkAmber')    # Keep things interesting for your users
@@ -44,27 +67,37 @@ def drawBoard(outer, inner):#cellKeys):
     
     layout = [[sg.Text('Persistent window')],
               [sg.Exit(),sg.Button("Redo"),
-               sg.Slider(range = (0,200), orientation = 'h', default_value = outer.size,
+               sg.Slider(range = (0,100), orientation = 'h', default_value = outer.size,
                          key = 'o', enable_events = True),
-               sg.Slider(range = (0,200), orientation = 'h', default_value = inner.size,
+               sg.Slider(range = (0,100), orientation = 'h', default_value = inner.size,
                          key = 'i', enable_events = True)], 
-              [sg.Canvas(key='mycanvas',size=(800,800),background_color="white")]]     
+              [sg.Canvas(key='mycanvas',
+                         size=(800,800),background_color="white")]]     
 
     window = sg.Window('Window that stays open', layout, finalize=True)
     canvas = window['mycanvas'].TKCanvas
-    print(window['o'].TKScale.get())
-    outer.draw(canvas, numpy.array((400, 400)), 'black')    
-    inner.draw(canvas, numpy.array((400, 400)), 'black')    
-    print("window created")
+    
+    currentMap.setcanvas(canvas)
+    redraw()
+        
+#    outer.draw(canvas, numpy.array((400, 400)), 'black')    
+#    inner.draw(canvas, numpy.array((400, 400)), 'black')    
+#    print("window created")
 
     while True:   # The Event Loop
         print("heer")
         event, values = window.read()
         print(event, values)
         if event == 'o':
-            outer.updateAndDraw(window['o'].TKScale.get(), canvas, numpy.array((400,400)))    
+            canvas.delete('all')
+            outer.size = window['o'].TKScale.get()
+            redraw()
+              
+            #outer.updateAndDraw(window['o'].TKScale.get(), canvas, numpy.array((400,400)))    
         if event == 'i':
-            inner.updateAndDraw(window['i'].TKScale.get(), canvas, numpy.array((400,400)))    
+            canvas.delete('all')
+            inner.size = window['i'].TKScale.get()
+            redraw()
         if event == "Redo":
             drawLines(canvas, outer, inner)
         if event == sg.WIN_CLOSED or event == 'Exit':
