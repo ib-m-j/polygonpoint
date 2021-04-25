@@ -2,74 +2,94 @@ import math
 import userinterface
 import numpy
 
-def ovalCoords(p, size = 1):
+def ovalCoords(p, size = 5):
     px = p[0]
     py = p[1]
     return (px-size, py-size, px+size, py+size)
 
 
+def weave(L1, L2):
+    component = [L1[0], L2[0]]
+    if len(L1) == 1:
+        return component
+    rest = weave(L1[1:], L2[1:])
+    return component + rest
+
+    
 class Polygon:
-    def __init__(self, outer, inner, skip = 1):
-        self. outer = outer
+    def __init__(self, outer, inner, advance = 1):
+        self.outer = outer
         self.inner = inner
-        self.skip = skip
-        self.allPointKeys = [(x,1) for x in range(outer.nPoints)]+\
-                            [(x,2) for x in range(inner.nPoints)]
-        self.allPointsKeysSorted = sorted(self.allPointKeys)
-        print(self.allPointsKeysSorted)
+        self.advance = advance
+        #        print(outer.size)
+        #        print(outer.directions)
+        #        print(outer.nPoints)
+        self.updateAllPoints()
         
+    def updateAllPoints(self):
+        outerList = [self.outer.size*numpy.array(
+            self.outer.directions[i]) for i in range(self.outer.nPoints)]
+        innerList = [self.inner.size*numpy.array(
+            self.inner.directions[i]) for i in range(self.inner.nPoints)]
+        self.spikes = outer.nPoints
+        self.allPoints =  weave(outerList, innerList)
+        
+    def respike(self, new):
+        self.outer = PolygonPoints(new, self.outer.size, self.outer.offSet)
+        self.inner = PolygonPoints(new, self.inner.size, self.inner.offSet)
+        self.updateAllPoints
         
     def draw(self, canvasMap):
+        self.updateAllPoints()
         self.outer.draw(canvasMap)
-        if self.skip % 2 == 1:
+        if self.advance % 2 == 1:
             self.inner.draw(canvasMap)
-        currentKeyIndex = 0
-
-        def getLevel(index):
-            if self.allPointsKeysSorted[index][0] == 1:
-                res = (outer, index % 2)
-            else:
-                res = (inner, index // 2)
-            return res
-        
-        (level, ind) = getLevel(currentKeyIndex)
-        p1 = level.size*numpy.array(level.directions[ind])
-
-        
+        currentKey = 0
+        p1 = self.allPoints[currentKey]
         while (True):
-            currentKeyIndex = (currentKeyIndex + self.skip) % len(self.allPointsKeysSorted)
-            print(currentKeyIndex)
-            (level, ind) = getLevel(currentKeyIndex)
-            p2 = level.size*numpy.array(level.directions[ind])
+            print(currentKey)
+            currentKey = (currentKey + self.advance) % len(self.allPoints)
+            p2 = self.allPoints[currentKey]
             print(p1, canvasMap.map(p1),p2, canvasMap.map(p2))
             canvasMap.canvas.create_line(canvasMap.map(p1) + canvasMap.map(p2))
-            if currentKeyIndex == 0:
+            if currentKey == 0:
                 break
             p1 = p2
             
                           
             
 class PolygonPoints:
-    def __init__(self, nPoints, size, startAngle = 0  ):
+    def __init__(self, nPoints, size, offSet = False  ):
         self.nPoints = nPoints
         self.size = size
+
+        if offSet:
+            startAngle = math.pi/nPoints
+        else:
+            startAngle = 0
+            
         self.directions = [
-            (math.cos(2*math.pi*x/nPoints), math.sin(2*math.pi*x/nPoints)) \
+            (math.cos(2*math.pi*x/nPoints+startAngle), math.sin(2*math.pi*x/nPoints+startAngle)) \
             for x in range(nPoints)]
+        
+        self.offSet = offSet
 
     def draw(self, canvasMap, color = 'black'):
         for p in self.directions:
-            oC = ovalCoords(self.size*numpy.array(p))
+            pointMapped = canvasMap.map(self.size*numpy.array(p))
+            print("oval", pointMapped)
+            oC = ovalCoords(pointMapped)
             p1 = numpy.array(oC[:2])
             p2 = numpy.array(oC[2:4])
-            canvasMap.canvas.create_oval(canvasMap.map(p1)+canvasMap.map(p2), outline=color)
+            canvasMap.canvas.create_oval(oC, outline=color)
 
     def updateAndDraw(self, newSize, canvas, center):
         self.draw(canvas, center, "white")
         self.size = newSize
         self.draw(canvas, center, "black")
         for p in self.directions:
-            canvas.create_oval(ovalCoords(self.size*numpy.array(p) + center),outline="black")
+            canvas.create_oval(
+                ovalCoords(self.size*numpy.array(p) + center),outline="black")
 
 
         
@@ -79,8 +99,9 @@ class PolygonPoints:
 
 if __name__ == '__main__':
 
-    outer = PolygonPoints(7, 100)
-    inner  = PolygonPoints(7, 50)
+    outer = PolygonPoints(3, 100, False)
+    inner  = PolygonPoints(3, 50, False)
     #five.draw()
-    userinterface.drawObjects.extend([Polygon(outer, inner, 1)])
-    userinterface.drawBoard(outer, inner)
+    polygon = Polygon(outer, inner, 2)
+    userinterface.drawObjects.extend([polygon])
+    userinterface.drawBoard(outer, inner, polygon)

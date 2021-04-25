@@ -43,7 +43,8 @@ class CanvasMap:
         self.canvas = canvas
         
     def map(self, point):
-        return list(self.scale*point +self.origin)
+        mirrorPoint = numpy.array((point[0], -point[1]))
+        return list(self.scale*mirrorPoint +self.origin)
 
 
         
@@ -56,7 +57,7 @@ def redraw():
 
 
         
-def drawBoard(outer, inner):#cellKeys):
+def drawBoard(outer, inner, polygon):#cellKeys):
 
     sg.theme('DarkAmber')    # Keep things interesting for your users
 #    cells =  [[sg.Input(
@@ -67,10 +68,19 @@ def drawBoard(outer, inner):#cellKeys):
     
     layout = [[sg.Text('Persistent window')],
               [sg.Exit(),sg.Button("Redo"),
-               sg.Slider(range = (0,100), orientation = 'h', default_value = outer.size,
-                         key = 'o', enable_events = True),
+               sg.Text("Outer size"), 
+               sg.Slider(range = (0,1000), orientation = 'h', default_value = outer.size,
+                         key = '-o-', enable_events = True),
+               sg.Text("Inner size"),
                sg.Slider(range = (0,100), orientation = 'h', default_value = inner.size,
-                         key = 'i', enable_events = True)], 
+                         key = '-i-', enable_events = True)],
+              [sg.Text('Advance value'),
+               sg.Slider(range= (1,5), orientation = 'h', default_value = polygon.advance,
+                         key = '-advance-', enable_events = True),
+               sg.Text('Spikes'),
+               sg.Slider(range= (1,20), orientation = 'h', default_value = polygon.spikes,
+                         key = '-spikes-', enable_events = True),
+               sg.Button("In", key= '-in-'), sg.Button('Out', key = '-out-')],
               [sg.Canvas(key='mycanvas',
                          size=(800,800),background_color="white")]]     
 
@@ -88,15 +98,35 @@ def drawBoard(outer, inner):#cellKeys):
         print("heer")
         event, values = window.read()
         print(event, values)
-        if event == 'o':
+        if event == '-o-':
             canvas.delete('all')
-            outer.size = window['o'].TKScale.get()
+            polygon.outer.size = values[event]
             redraw()
               
             #outer.updateAndDraw(window['o'].TKScale.get(), canvas, numpy.array((400,400)))    
-        if event == 'i':
+        if event == '-i-':
             canvas.delete('all')
-            inner.size = window['i'].TKScale.get()
+            polygon.inner.size = values[event]
+            redraw()
+        if event == '-in-':
+            canvas.delete('all')
+            currentMap.scale = currentMap.scale/2
+            redraw()
+        if event == '-out-':
+            canvas.delete('all')
+            currentMap.scale = currentMap.scale*2
+            redraw()
+        if event == '-advance-':
+            canvas.delete('all')
+            polygon.advance = int(values[event])
+            redraw()
+#        if event == '-skip-':
+#            canvas.delete('all')
+#            polygon.skip = int(values[event])
+#            redraw()
+        if event == '-spikes-':
+            canvas.delete('all')
+            polygon.respike(int(values[event]))
             redraw()
         if event == "Redo":
             drawLines(canvas, outer, inner)
